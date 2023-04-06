@@ -1,0 +1,23 @@
+version: "3.8"
+services:
+    con-client:
+        image: stoimenovrado/img-client
+        ports:
+            - 80:5000
+        networks:
+            - fun-facts
+        depends_on:
+            - con-storage
+    con-storage:
+        image: stoimenovrado/img-storage
+        networks:
+            - fun-facts
+        environment:
+            MYSQL_ROOT_PASSWORD: "ExamPa$$w0rd"
+    con-generator:
+        build:
+            image: stoimenovrado/img-generator
+        networks:
+            - fun-facts
+networks:
+    fun-facts:

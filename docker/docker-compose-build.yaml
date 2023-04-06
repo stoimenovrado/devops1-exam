@@ -1,0 +1,22 @@
+version: "3.8"
+services:
+    con-client:
+        image: stoimenovrado/img-client-test
+        ports:
+            - 8080:5000
+        networks:
+            - exam-net
+        depends_on:
+            - con-storage
+    con-storage:
+        image: stoimenovrado/img-storage-test
+        networks:
+            - exam-net
+        environment:
+            MYSQL_ROOT_PASSWORD: "ExamPa$$w0rd"
+    con-generator:
+        image: stoimenovrado/img-generator-test
+        networks:
+            - exam-net
+networks:
+    exam-net:
