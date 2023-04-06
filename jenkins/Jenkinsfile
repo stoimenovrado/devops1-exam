@@ -1,0 +1,104 @@
+pipeline 
+{
+    agent 
+    {
+        label 'docker'
+    }
+    environment 
+    {
+        DOCKERHUB_CREDENTIALS=credentials('docker-hub')
+    }
+    stages 
+    {
+        stage('Clone') 
+        {
+            steps 
+            {
+                git branch: 'main', url: 'http://192.168.69.202:3000/vagrant/exam'
+            }
+        }
+        stage('Build')
+        {
+            steps
+            {
+                sh 'cd client && docker image build -t img-client .'
+                sh 'cd storage && docker image build -t img-storage .'
+                sh 'cd generator && docker image build -t img-generator .'
+            }
+        }
+        stage('Network')
+        {
+            steps
+            {
+                sh 'docker network ls | grep exam-net || docker network create exam-net'
+            }
+        }
+        stage('Deploy')
+        {
+            steps
+            {
+                sh '''
+                docker container rm -f con-frontend || true
+                docker container run -d --name con-frontend --net exam-net -p 8080:5000 img-client
+                docker container rm -f con-database || true
+                docker container run -d --name con-database --net exam-net -e MYSQL_ROOT_PASSWORD='ExamPa$$w0rd' img-storage
+                docker container rm -f con-backend || true
+                docker container run -d --name con-backend --net exam-net img-generator
+              '''  
+            }
+        }
+        stage('Testing')
+        {
+            steps
+            {
+               echo 'Test #1 - reachability'
+               sh 'echo $(curl --write-out "%{http_code}" --silent --output /dev/null http://localhost:8080) | grep 200'
+            }
+        }
+         stage('CleanUp')
+        {
+            steps
+            {
+                sh 'docker container rm -f con-client con-storage con-generator'
+            }
+        }
+        stage('Docker Login')
+        {
+            steps 
+            {
+                sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
+            }
+        }
+        stage('Image Publish')
+        {
+            steps 
+            {
+                echo 'Publish client img'
+                sh 'docker image tag img-client stoimenovrado/img-client'
+                sh 'docker push stoimenovrado/img-client'
+
+                echo 'Publish storage img'
+                sh 'docker image tag img-storage stoimenovrado/img-storage'
+                sh 'docker push stoimenovrado/img-storage'
+
+                echo 'Publish generator img'
+                sh 'docker image tag img-generator stoimenovrado/img-generator'
+                sh 'docker push stoimenovrado/img-generator'
+             }
+        }
+        stage('Deploy Production')
+        {
+            steps
+            {
+                sh '''
+                docker container rm -f con-client || true
+                docker container run -d --name con-client --net exam-net -p 80:5000 stoimenovrado/img-client
+                docker container rm -f con-storage || true
+                docker container run -d --name con-storage --net exam-net -e MYSQL_ROOT_PASSWORD='ExamPa$$w0rd' stoimenovrado/img-storage
+                docker container rm -f con-generator || true
+                docker container run -d --name con-generator --net exam-net stoimenovrado/img-generator
+              '''
+            }
+        }
+    }
+}
