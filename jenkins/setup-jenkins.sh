@@ -1,7 +1,7 @@
 #!/bin/bash
 
-CRED_NAME=stoimenovrado
-CRED_PASS=dckr_pat_Tq51GZODuaIGEq-lmZvt0R0Xbmk
+CRED_NAME=<Docker User here>
+CRED_PASS=<Docker Key here>
 
 echo "* Stop Jenkins"
 systemctl stop jenkins
